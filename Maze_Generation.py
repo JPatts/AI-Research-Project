@@ -278,7 +278,7 @@ def main():
         draw_character(screen,human_pos[0],human_pos[1], human_image)
         draw_character(screen,zombie_pos[0],zombie_pos[1], zombie_image)
         pygame.display.flip()
-        clock.tick(100)
+        clock.tick(10)
 
         # check for collision
         if human_pos == zombie_pos:
