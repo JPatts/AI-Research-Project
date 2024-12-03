@@ -3,7 +3,7 @@ from main_env import MazeEnv
 import time
 import numpy as np
 import random
-import register_env
+#import register_env
 
 class QLeaningAgent:
     def __init__(self, state_size, action_size):
