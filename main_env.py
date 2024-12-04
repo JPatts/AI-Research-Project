@@ -13,6 +13,7 @@ class MazeEnv(gym.Env):
     def __init__(self, board_number=1):
         super(MazeEnv, self).__init__()
 
+
         # Helpful constants
         self.GRID_SIZE = 60
         self.LINE_WIDTH = 3
@@ -32,8 +33,14 @@ class MazeEnv(gym.Env):
         # Initializing pygame for rendering the environment
         pygame.init()
         self.screen = None
-        self.human_image = pygame.transform.scale(pygame.image.load('old_man.png'), (self.GRID_SIZE, self.GRID_SIZE))
-        self.zombie_image = pygame.transform.scale(pygame.image.load('zombie.png'), (self.GRID_SIZE, self.GRID_SIZE))
+        self.human_image = pygame.transform.scale(
+            pygame.image.load('old_man.png'), 
+            (self.GRID_SIZE, self.GRID_SIZE)
+        )
+        self.zombie_image = pygame.transform.scale(
+            pygame.image.load('zombie.png'), 
+            (self.GRID_SIZE, self.GRID_SIZE)
+        )
 
         # Reset initailizes the environment
         self.reset()
@@ -48,28 +55,35 @@ class MazeEnv(gym.Env):
         assert self.action_space.contains(action), f"Invalid action {action}"
         # This will update the zombie position
         prev_distance = self._manhattan_distance(self.zombie_pos, self.human_pos)
-        self.zombie_pos = self._get_new_position(self.zombie_pos, action)
+        steps_taken = getattr(self, 'steps_taken', 0) + 1
+        setattr(self, 'steps_taken', steps_taken)
 
+        # This will update the zombie position
+        self.zombie_pos = self._get_new_position(self.zombie_pos, action)
         # This will update the human position
         self._move_human()
-
-        # Moving the zombie and maybe giving a reward
+        # Using the manhattan distance to find the distance between the zombie and human
         new_distance = self._manhattan_distance(self.zombie_pos, self.human_pos)
-        #reward = prev_distance - new_distance # Giving a reward if the distance decreases
-        max_distance = self.num_rows + self.num_cols - 2
 
-        if new_distance == 1:
-            reward = 50 # If the agent gets very close, they will get a big reward
-        elif new_distance == 2:
-            reward = 20
-        elif new_distance == max_distance - 1:
-            reward = -10 # Discouraging the agent from being at the max distance away
+        # Reward system
+        max_distance = self.num_rows + self.num_cols - 2
+        distance_ratio = new_distance / max_distance
+        time_penalty = -0.1 * (steps_taken / 100)
+
+        if self.zombie_pos == self.human_pos: # Very large reward for capture
+            reward = 100 + (50 * (1 - steps_taken / 200))
+        elif new_distance == 1: # Big reward if zombie is close
+            reward = 25 * (1 - distance_ratio) 
+        elif new_distance == 2: # Reward for getting closer
+            reward = 10 * (prev_distance - new_distance) / max_distance
+        elif new_distance == max_distance - 1: # Discouraging zombie from being the max distance away
+            reward = -15 * (new_distance - prev_distance) / max_distance 
         else:
-            if new_distance < prev_distance:
-                reward = 1
-            else:
-                reward = -1
-        
+            reward = -5 # This should penalize wandering
+
+        reward += time_penalty
+        reward = max(-50, min(100, reward)) # This will clip rewards
+
         done = self.zombie_pos == self.human_pos
         info = {
             'distance_to_human' : self._manhattan_distance(self.zombie_pos, self.human_pos),
@@ -94,7 +108,12 @@ class MazeEnv(gym.Env):
     def render(self, mode='human'):
         if self.screen is None:
             self.screen = pygame.display.set_mode((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE))
-        
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
         self.screen.fill(self.WHITE)
         self._draw_maze()
         human_row, human_col = self.human_pos
