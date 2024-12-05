@@ -3,6 +3,53 @@ from main_env import MazeEnv
 from qlearning import QLearningAgent
 import time
 import numpy as np
+import matplotlib.pyplot as plt
+
+#this will plot the agent training parameters
+#reward: # of rewards per episode
+#steps: # of steps per episode
+#epsilon: exploration rate
+#episodes: # of episodes total
+
+def plot_training(reward, steps, epsilon, episodes):
+    plt.figure(figsize=(18, 6)) #feel free to change this if it is too small or too big. i just put random numbers
+
+    #plotting reward
+    plt.subplot(1, 3, 1)
+    plt.plot(reward, label='Total Reward')
+    window_size = 50 #this is the window size for the moving average
+
+    if len(reward) > window_size:
+        moving_avg = np.convolve(reward, np.ones(window_size), mode='valid')
+        plt.plot(range(window_size - 1, len(reward)), moving_avg, label = 'Moving Average', color='red')
+
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.title('Episode Rewards Over Time')
+    plt.legend()
+
+    #plotting steps per episode
+    plt.subplot(1, 3, 2)
+    plt.plot(steps, label='Steps per Episode', color='blue')
+    plt.xlabel('Episode')
+    plt.ylabel('Steps')
+    plt.title('Steps Taken per Episode')
+    plt.legend()
+
+    #plotting epsilon decay over episodes
+    plt.subplot(1, 3, 3)
+    plt.plot(epsilon, label='Epsilon (Exploration Rate)', color='green')
+    plt.xlabel('Episode')
+    plt.ylabel('Epsilon')
+    plt.title('Epsilon Decay Over Episodes')
+    plt.legend()
+
+    plt.tight_layout() #this will make sure the plots don't overlap
+    plt.show()
+
+
+
+
 
 def main():
     env = MazeEnv(board_number=1)
