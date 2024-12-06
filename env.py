@@ -55,7 +55,6 @@ class MazeEnv(gym.Env):
         # Reset initailizes the environment and puts the zombie and human at opposite corners
         self.reset()
 
-
     # Used at the begining of every episode to set the humand and zombie at the 
     # opposite corners of the env
     def reset(self):
@@ -136,11 +135,48 @@ class MazeEnv(gym.Env):
 
         self.screen.fill(self.WHITE)
         self._draw_maze()
+
+        # This function will highlight the A* path and goal if they exist
+        self._highlight_human_path()
+
+        # Draw characters
         human_row, human_col = self.human_pos
         zombie_row, zombie_col = self.zombie_pos
         self._draw_character(human_row, human_col, self.human_image)  
         self._draw_character(zombie_row, zombie_col, self.zombie_image)
+
         pygame.display.flip()
+
+    def _highlight_human_path(self):
+        if hasattr(self, 'human_path') and self.human_path and hasattr(self, 'human_goal') and self.human_goal:
+            # create transparent overlay 
+            overlay = pygame.Surface((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE), pygame.SRCALPHA)
+
+            # RGBA format (R, G, B, A) where A is is alpha transparency (0-255)
+            path_color = (255, 150, 50, 30)
+
+            # draw path cells
+            for(r, c) in self.human_path:
+                x = c * self.GRID_SIZE
+                y = r * self.GRID_SIZE
+                pygame.draw.rect(overlay, path_color, (x, y, self.GRID_SIZE, self.GRID_SIZE))
+
+                # Make goal cell blink 
+                current_time = pygame.time.get_ticks()
+                blink_on = (current_time // 500) % 2 == 0 # every half second
+                
+                if blink_on:
+                    goal_color = (255, 255, 0, 30) # yellow
+                else:
+                    goal_color = (255, 255, 0, 5)  # dimmer yellow
+
+                goal_r, goal_c = self.human_goal
+                gx = goal_c * self.GRID_SIZE
+                gy = goal_r * self.GRID_SIZE
+                pygame.draw.rect(overlay, goal_color, (gx, gy, self.GRID_SIZE, self.GRID_SIZE))
+
+                # blit overlay onto screen
+                self.screen.blit(overlay, (0,0))
 
     # Used if the user clicks the x on the pygame window
     def close(self):
@@ -162,7 +198,6 @@ class MazeEnv(gym.Env):
         except Exception as e:
             print(f"Error drawing character: {e}")
             
-    # Draws the maze itself
     def _draw_maze(self):
         font = pygame.font.Font(None, 24) 
         for row in range(self.num_rows):
@@ -201,11 +236,29 @@ class MazeEnv(gym.Env):
 
             # adds bottom wall to grid point (0,0) to (0,6)
             for col in range(6):
-                grid[0][col][2] = True 
+                grid[1][col][2] = True 
             
             # adds top wall to grid point (0,0) to (0,6)
             for col in range(6):
-                grid[1][col][0] = True
+                grid[2][col][0] = True
+
+            for col in range(6):
+                grid[5][col+2][2] = True
+            
+            for col in range(6):
+                grid[6][col+2][0] = True
+
+            grid[6][4][2] = True
+            grid[7][4][0] = True
+
+            grid[5][1][3] = True
+            grid[5][0][1] = True
+
+            grid[6][1][3] = True
+            grid[6][0][1] = True
+            
+            grid[7][1][3] = True
+            grid[7][0][1] = True
 
         # Plain 10x10 board
         elif board_number == 3: 
@@ -365,7 +418,14 @@ class MazeEnv(gym.Env):
 
         # Move to next step in path if it exists
         if path and len(path) > 1:
+            # store the path and goal for path and goal overlay
+            self.human_goal= goal
+            self.human_path = path
             self.human_pos = path[1]
+        else:
+            # if no path found
+            self.human_goal = None
+            self.human_path = None 
     
     def _compute_reachable_cells(self, start_pos):
         # BFS from start_pos using _get_neighbors

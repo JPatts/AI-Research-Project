@@ -50,7 +50,7 @@ def plot_training(reward, steps, epsilon, episodes):
 
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
-    env = MazeEnv(board_number=1)  # this chooses the board number that will be used at runtime
+    env = MazeEnv(board_number=2)  # this chooses the board number that will be used at runtime
     # Only a single agent is made right now, more agents can be made and tested
     agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
     
