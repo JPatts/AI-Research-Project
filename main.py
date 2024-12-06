@@ -48,6 +48,58 @@ def plot_training(reward, steps, epsilon, episodes):
     plt.tight_layout() #this will make sure the plots don't overlap
     plt.show()
 
+#running three boards and returning the metrics. returns a dictionary of rewards, steps, and epsilon per episode
+def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=None):
+    print(f"Running board {board_num}...")
+    env = MazeEnv(board_number=board_num)
+
+    if pretrained_model:
+        agent.load(pretrained_model) # this is going to load the model from episode 1000 of 5x5 and throw it at a 20x20
+
+    rewards, steps, epsilon = [], [], []
+
+    try:
+        for episode in range(episodes):
+            state = env.reset() # reset env at the start of each epi
+            done = False
+            total_reward = 0
+            total_steps = 0
+
+            while not done:
+                if episode % render_frequency == 0:
+                    env.render() #render env
+                    time.sleep(0.1)
+
+                action = agent.get_action(state)
+                next_state, reward, done, info = env.step(action)
+                agent.update(state, action, reward, next_state, done)
+                state = next_state
+
+                total_reward += reward #accumulate rewards
+                total_steps += 1 #accumulate steps
+
+            #record the rewards, steps, and epsilon
+            rewards.append(total_reward)
+            steps.append(total_steps)
+            epsilon.append(agent.get_stats()['epsilon'])
+
+            #save model every 100 episodes
+            if episode % 100 == 0:
+                agent.save(os.path.join(os.path.dirname(__file__), 'models', f'zombie_agent_ep{episode}.pkl'))
+
+    except KeyboardInterrupt:
+        print("\nTraining interrupted. Saving model...")
+        agent.save('zombie_agent_interrupted.pkl')
+
+    finally:
+        env.close()
+
+    return {'rewards': rewards, 'steps': steps, 'epsilon': epsilon}
+
+
+
+
+
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
     env = MazeEnv(board_number=1)  # this chooses the board number that will be used at runtime
@@ -58,6 +110,27 @@ def main():
     episodes = 1000
     save_frequency = 100
     render_frequency = 50
+
+    """
+    Train agents on different boards
+
+    metrics_5x5 = train_agent(1, episodes, render_frequency, agent)
+    metrics_10x10 = train_agent(3, episodes, render_frequency, agent)
+    metrics_20x20 = train_agent(5, episodes, render_frequency, agent)
+
+    # Plotting the metrics
+    plot_training(metrics_5x5['rewards'], metrics_5x5['steps'], metrics_5x5['epsilon'], episodes)
+    plot_training(metrics_10x10['rewards'], metrics_10x10['steps'], metrics_10x10['epsilon'], episodes)
+    plot_training(metrics_20x20['rewards'], metrics_20x20['steps'], metrics_20x20['epsilon'], episodes)
+
+    #testing 5x5 on 20x20
+    pretrained_model_path = os.path.join(os.path.dirname(__file__), 'models', 'zombie_agent_ep1000.pkl')
+
+    metrics_PT_20x20 = test_agent(5, episodes=100, render_frequency, agent, pretrained_model_path)
+
+    #plot results
+    plot_training(metrics_PT_20x20['rewards'], metrics_PT_20x20['steps'], metrics_PT_20x20['epsilon'], 100)
+    """
     
     # Used to track metrics
     episode_rewards = []
