@@ -48,12 +48,8 @@ def plot_training(reward, steps, epsilon, episodes):
     plt.tight_layout() #this will make sure the plots don't overlap
     plt.show()
 
-
-
-
-
 def main():
-    env = MazeEnv(board_number=1)
+    env = MazeEnv(board_number=2)  # this chooses the board number that will be used at runtime
     agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
     
     episodes = 1000
