@@ -50,7 +50,7 @@ def plot_training(reward, steps, epsilon, episodes):
 
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
-    env = MazeEnv(board_number=2)  # this chooses the board number that will be used at runtime
+    env = MazeEnv(board_number=1)  # this chooses the board number that will be used at runtime
     # Only a single agent is made right now, more agents can be made and tested
     agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
     
@@ -87,6 +87,12 @@ def main():
                 state = next_state
                 total_reward += reward
                 steps += 1
+
+            # when done = True the block above is exited 
+            # below if statement makes GAME OVER screen
+            if done:
+                pass
+                #env._game_over_screen()
 
             # Appending the number of steps and rewards amount to the local lists
             episode_rewards.append(total_reward)

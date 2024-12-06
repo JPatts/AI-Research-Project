@@ -147,13 +147,41 @@ class MazeEnv(gym.Env):
 
         pygame.display.flip()
 
+    def _game_over_screen(self):
+        # copy current screen
+        screen_copy = self.screen.copy()
+
+        small_scale = 0.1 
+        small_width = int(self.num_cols * self.GRID_SIZE * small_scale)
+        small_height = int(self.num_cols * self.GRID_SIZE * small_scale)
+
+        small_surface = pygame.transform.smoothscale(screen_copy, (small_width,small_height))
+
+        #scale back up for pixelation
+        pixelated_surface = pygame.transform.smoothscale(
+            small_surface, 
+            (self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE)
+        )
+
+        self.screen.blit(pixelated_surface, (0,0))
+
+        font = pygame.font.Font(None,100)
+        text_surface = font.render("GAME OVER", True, (255, 0, 0))
+        text_rect = text_surface.get_rect(center=(self.num_cols * self.GRID_SIZE // 2, self.num_rows * self.GRID_SIZE // 2))
+        self.screen.blit(text_surface, text_rect)
+
+        pygame.display.flip()
+        pygame.time.wait(2000)
+        #pygame.quit()
+        #sys.exit()
+
     def _highlight_human_path(self):
         if hasattr(self, 'human_path') and self.human_path and hasattr(self, 'human_goal') and self.human_goal:
             # create transparent overlay 
             overlay = pygame.Surface((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE), pygame.SRCALPHA)
 
             # RGBA format (R, G, B, A) where A is is alpha transparency (0-255)
-            path_color = (255, 150, 50, 30)
+            path_color = (50, 150, 50, 20)
 
             # draw path cells
             for(r, c) in self.human_path:
@@ -163,12 +191,12 @@ class MazeEnv(gym.Env):
 
                 # Make goal cell blink 
                 current_time = pygame.time.get_ticks()
-                blink_on = (current_time // 500) % 2 == 0 # every half second
+                blink_on = (current_time // 200) % 2 == 0 # every half second
                 
                 if blink_on:
-                    goal_color = (255, 255, 0, 30) # yellow
+                    goal_color = (255, 255, 0, 100) # yellow
                 else:
-                    goal_color = (255, 255, 0, 5)  # dimmer yellow
+                    goal_color = (255, 255, 0, 50)  # dimmer yellow
 
                 goal_r, goal_c = self.human_goal
                 gx = goal_c * self.GRID_SIZE
