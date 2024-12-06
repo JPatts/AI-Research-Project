@@ -6,6 +6,7 @@ import pygame
 import heapq
 from collections import deque
 import sys
+import os
 
 class MazeEnv(gym.Env):
     metadata = {'render.modes': ['human'], "render_fps": 4}
@@ -34,11 +35,11 @@ class MazeEnv(gym.Env):
         pygame.init()
         self.screen = None
         self.human_image = pygame.transform.scale(
-            pygame.image.load('old_man.png'), 
+            pygame.image.load(os.path.join('assets', 'old_man.png')), 
             (self.GRID_SIZE, self.GRID_SIZE)
         )
         self.zombie_image = pygame.transform.scale(
-            pygame.image.load('zombie.png'), 
+            pygame.image.load(os.path.join('assets', 'zombie.png')), 
             (self.GRID_SIZE, self.GRID_SIZE)
         )
 

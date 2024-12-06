@@ -1,9 +1,10 @@
 #This file might not be used for gym, but it is used for qlearning
-from main_env import MazeEnv
+from env import MazeEnv
 from qlearning import QLearningAgent
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 #this will plot the agent training parameters
 #reward: # of rewards per episode
@@ -101,7 +102,7 @@ def main():
 
             # Saving the model periodically
             if episode % save_frequency == 0:
-                agent.save(f'zombie_agent_ep{episode}.pkl')
+                agent.save(os.path.join(os.path.dirname(__file__), 'models', f'zombie_agent_ep{episode}.pkl'))
 
     except KeyboardInterrupt:
         print("\nTraining interrupted. Saving model...")
