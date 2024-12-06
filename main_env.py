@@ -47,8 +47,8 @@ class MazeEnv(gym.Env):
 
 
     def reset(self):
-        self.human_pos = (0, 0)
-        self.zombie_pos = (self.num_rows - 1, self.num_cols - 1)
+        self.human_pos = (0, 0) # top left
+        self.zombie_pos = (self.num_rows - 1, self.num_cols - 1) # bottom right
         return self._get_obs()
     
     def step(self, action):
@@ -172,35 +172,23 @@ class MazeEnv(gym.Env):
             num_rows, num_cols = 8, 8
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
             # Add walls for board 2
-            for col in range(0,4):
-                grid[0][col][2] = True
-            for row in range(1,4):
-                grid[row][4][3] = True
-                
-        elif board_number == 3:
+            # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+
+            # adds bottom wall to grid point (0,0) to (0,6)
+            for col in range(6):
+                grid[0][col][2] = True 
+            
+            # adds top wall to grid point (0,0) to (0,6)
+            for col in range(6):
+                grid[1][col][0] = True
+
+        elif board_number == 3: 
             num_rows, num_cols = 10, 10
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
             
         elif board_number == 4:
             num_rows, num_cols = 15, 15
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
-            # Create spiral maze
-            for layer in range(7):
-                # Top edge
-                for col in range(layer, num_cols - layer):
-                    grid[layer][col][0] = True
-                # Right edge
-                for row in range(layer, num_rows - layer):
-                    grid[row][num_cols - layer - 1][1] = True
-                # Bottom edge
-                for col in range(layer, num_cols - layer):
-                    grid[num_rows - layer - 1][col][2] = True
-                # Left edge
-                for row in range(layer, num_rows - layer):
-                    grid[row][layer][3] = True
-            # Create entry/exit points
-            grid[0][0][3] = False
-            grid[num_rows - 1][num_cols - 1][1] = False
             
         elif board_number == 5:
             num_rows, num_cols = 20, 20
@@ -210,9 +198,6 @@ class MazeEnv(gym.Env):
             raise ValueError("Board number must be between 1 and 5")
             
         return grid, num_rows, num_cols    
-
-
-
 
     def _manhattan_distance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
@@ -240,7 +225,8 @@ class MazeEnv(gym.Env):
                 continue
             closed_set.add(current)
 
-            neighbors = self._get_neighbors(current)
+            current_row, current_col = current
+            neighbors = self._get_neighbors(current_row,current_col)
             for neighbor in neighbors:
                 tentative_g = g_score[current] + 1
                 if neighbor in closed_set:
@@ -253,16 +239,28 @@ class MazeEnv(gym.Env):
 
         return None
 
-    def _get_neighbors(self, position):
-        row, col = position
-        neighbors = []
-        moves = [(-1,0), (0,1), (1,0), (0,-1)]
-        for idx, move in enumerate(moves):
-            new_row = row + move[0]
-            new_col = col + move[1]
-            if 0 <= new_row < self.num_rows and 0 <= new_col < self.num_cols:
-                if not self.grid[row][col][idx]:
-                    neighbors.append((new_row, new_col))
+    def _get_neighbors(self, row, col):
+        neighbors = []          
+
+        # Directions:
+        # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+
+        # Move up if no top wall
+        if row > 0 and not self.grid[row][col][0]:
+            neighbors.append((row - 1, col))
+
+        # Move right if no right wall
+        if col < self.num_cols - 1 and not self.grid[row][col][1]:
+            neighbors.append((row, col + 1))
+
+        # Move down if no bottom wall
+        if row < self.num_rows - 1 and not self.grid[row][col][2]:
+            neighbors.append((row + 1, col))
+    
+        # Move left if no left wall
+        if col > 0 and not self.grid[row][col][3]:
+            neighbors.append((row, col - 1))
+
         return neighbors
     
     def _find_furthest_cells(self, distances):
@@ -276,15 +274,18 @@ class MazeEnv(gym.Env):
     
     def _get_new_position(self, position, action):
         row, col = position
-        if action == 0: # up
-            row -= 1
-        elif action == 1: # right
-            col += 1
-        elif action == 2: # down
-            row += 1
-        elif action == 3: # left
-            col -= 1
-        return (row, col) if 0 <= row < self.num_rows and 0 <= col < self.num_cols else position
+        
+        # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+
+        if action == 0 and row > 0 and not self.grid[row][col][0]:
+                row -= 1
+        elif action == 1 and col < self.num_cols - 1 and not self.grid[row][col][1]:
+                col += 1
+        elif action == 2 and row < self.num_rows - 1 and not self.grid[row][col][2]:
+                row += 1
+        elif action == 3 and col > 0 and not self.grid[row][col][3]:
+                col -= 1
+        return (row, col)
 
     def _compute_distance_from_zombie(self):
         distances = [[-1 for _ in range(self.num_cols)] for _ in range(self.num_rows)]
@@ -295,7 +296,7 @@ class MazeEnv(gym.Env):
         while queue:
             row, col = queue.popleft()
             current_distance = distances[row][col]
-            neighbors = self._get_neighbors((row,col))
+            neighbors = self._get_neighbors(row, col)
             for neighbor in neighbors:
                 n_row, n_col = neighbor
                 if distances[n_row][n_col] == -1: # not visited 
@@ -304,17 +305,51 @@ class MazeEnv(gym.Env):
         return distances
 
     def _move_human(self):
-        distance = self._compute_distance_from_zombie()
+        # comput distance from zombie to all reachable cells 
+        zombie_distances = self._compute_distance_from_zombie()
 
-        max_distance = max(max(row) for row in distance)
-        furthest_cells = [
-            (row, col)
-            for row in range(self.num_rows)
-            for col in range(self.num_cols)
-            if distance[row][col] == max_distance
-        ]
+        # Find all reachable cells fo the human using BFS 
+        reachable_distances = self._compute_reachable_cells(self.human_pos)
+
+        # combine reachable cells with zombie distances
+        furthest_cells = []
+        max_distance = - 1
+
+        for row in range(self.num_rows):
+            for col in range(self.num_cols):
+                if reachable_distances[row][col] != -1: # cell is reachable by human agent 
+                    distance_from_zombie = zombie_distances[row][col]
+                    if distance_from_zombie > max_distance:
+                        max_distance = distance_from_zombie
+                        furthest_cells = [(row, col)]
+                    elif distance_from_zombie == max_distance:
+                        furthest_cells.append((row,col))
+        
+        if not furthest_cells:
+            # if no furthest cells found, do nothing
+            return
+    
+        # randomly choose one of furthest cells found
         goal = random.choice(furthest_cells)
+
+        # use A* to plan path to goal
         path = self._a_star(self.human_pos, goal)
 
+        # Move to next step in path if it exists
         if path and len(path) > 1:
             self.human_pos = path[1]
+    
+    def _compute_reachable_cells(self, start_pos):
+        # BFS from start_pos using _get_neighbors
+        distances = [[-1]*self.num_cols for _ in range(self.num_rows)]
+        queue = deque([start_pos])
+        distances[start_pos[0]][start_pos[1]] = 0
+
+        while queue:
+            r, c = queue.popleft()
+            for nr, nc in self._get_neighbors(r,c):
+                if distances[nr][nc] == -1: # not visited 
+                    distances[nr][nc] = distances[r][c] + 1
+                    queue.append((nr,nc))
+        
+        return distances
