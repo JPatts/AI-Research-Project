@@ -11,6 +11,9 @@ import os
 class MazeEnv(gym.Env):
     metadata = {'render.modes': ['human'], "render_fps": 4}
 
+    # Init will load a board passed into the constructor, otherwise it will be the 
+    # simplest board loaded. This creates the environment and loads the images
+    # used for the zombie and human. 
     def __init__(self, board_number=1):
         super(MazeEnv, self).__init__()
 
@@ -29,9 +32,15 @@ class MazeEnv(gym.Env):
         # Define the action and observation space
         self.action_space = spaces.Discrete(4) # up, down, left, right
         obs_size = 4 + (self.num_rows * self.num_cols * 4)
-        self.observation_space = spaces.Box(low=0, high=max(self.num_rows, self.num_cols), shape=(obs_size,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=0, 
+            high=max(self.num_rows, self.num_cols), 
+            shape=(obs_size,), 
+            dtype=np.float32
+        )
 
-        # Initializing pygame for rendering the environment
+        # Initializing pygame for rendering the environment and pointing to the assets for the zombie
+        # and the human
         pygame.init()
         self.screen = None
         self.human_image = pygame.transform.scale(
@@ -43,20 +52,26 @@ class MazeEnv(gym.Env):
             (self.GRID_SIZE, self.GRID_SIZE)
         )
 
-        # Reset initailizes the environment
+        # Reset initailizes the environment and puts the zombie and human at opposite corners
         self.reset()
 
 
+    # Used at the begining of every episode to set the humand and zombie at the 
+    # opposite corners of the env
     def reset(self):
         self.human_pos = (0, 0) # top left
         self.zombie_pos = (self.num_rows - 1, self.num_cols - 1) # bottom right
         return self._get_obs()
     
+    # Step is the function that will move both the human and the zombie through
+    # the environment. Step refers to every step the humand and zombie makes. This 
+    # function is also where the reward system is applied to the zombie 
     def step(self, action):
+        # Asserting a valid action can be made
         assert self.action_space.contains(action), f"Invalid action {action}"
-        # This will update the zombie position
+        # Getting the previous distance for use in the reward system
         prev_distance = self._manhattan_distance(self.zombie_pos, self.human_pos)
-        steps_taken = getattr(self, 'steps_taken', 0) + 1
+        steps_taken = getattr(self, 'steps_taken', 0) + 1 # Also used in reward system
         setattr(self, 'steps_taken', steps_taken)
 
         # This will update the zombie position
@@ -67,9 +82,9 @@ class MazeEnv(gym.Env):
         new_distance = self._manhattan_distance(self.zombie_pos, self.human_pos)
 
         # Reward system
-        max_distance = self.num_rows + self.num_cols - 2
-        distance_ratio = new_distance / max_distance
-        time_penalty = -0.1 * (steps_taken / 100)
+        max_distance = self.num_rows + self.num_cols - 2 # Maximum distance of the env
+        distance_ratio = new_distance / max_distance # Ratio of the distance to the max distance
+        time_penalty = -0.1 * (steps_taken / 100) # Time penalty for wandering 
 
         if self.zombie_pos == self.human_pos: # Very large reward for capture
             reward = 100 + (50 * (1 - steps_taken / 200))
@@ -82,10 +97,11 @@ class MazeEnv(gym.Env):
         else:
             reward = -5 # This should penalize wandering
 
-        reward += time_penalty
+        reward += time_penalty # Apply time penalty
         reward = max(-50, min(100, reward)) # This will clip rewards
 
-        done = self.zombie_pos == self.human_pos
+        done = self.zombie_pos == self.human_pos 
+        # Info will be used for data calculation within run_env.py
         info = {
             'distance_to_human' : self._manhattan_distance(self.zombie_pos, self.human_pos),
             'human_pos' : self.human_pos,
@@ -93,11 +109,13 @@ class MazeEnv(gym.Env):
         }
         return self._get_obs(), reward, done, info
     
+    # Not currently used
     def seed(self, seed=None):
         random.seed(seed)
         np.random.seed(seed)
         return [seed]
 
+    # Get observation is used to get the observation of the environment for use by the zombie
     def _get_obs(self): 
         grid_flat = np.array(self.grid).flatten()
         return np.concatenate([
@@ -106,6 +124,7 @@ class MazeEnv(gym.Env):
             grid_flat
         ]).astype(np.float32)
     
+    # Rendering the environment itself
     def render(self, mode='human'):
         if self.screen is None:
             self.screen = pygame.display.set_mode((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE))
@@ -123,10 +142,12 @@ class MazeEnv(gym.Env):
         self._draw_character(zombie_row, zombie_col, self.zombie_image)
         pygame.display.flip()
 
+    # Used if the user clicks the x on the pygame window
     def close(self):
         if self.screen is not None: 
             pygame.quit()
     
+    # Draws the zombie and the human within the grid of the environment
     def _draw_character(self, row, col, image):
         try:
             cell_size = self.GRID_SIZE
@@ -141,7 +162,7 @@ class MazeEnv(gym.Env):
         except Exception as e:
             print(f"Error drawing character: {e}")
             
-
+    # Draws the maze itself
     def _draw_maze(self):
         font = pygame.font.Font(None, 24) 
         for row in range(self.num_rows):
@@ -164,11 +185,14 @@ class MazeEnv(gym.Env):
                 text_rect = text_surface.get_rect(center=(x + self.GRID_SIZE // 2, y + self.GRID_SIZE // 2))
                 self.screen.blit(text_surface, text_rect)
 
+    # Loads the board configuration. There are 5 different choices here
     def _load_board(self, board_number):
+        # Plain 5x5 board
         if board_number == 1:
             num_rows, num_cols = 5, 5
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
             
+        # A 8x8 board with a wall
         elif board_number == 2:
             num_rows, num_cols = 8, 8
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
@@ -183,14 +207,17 @@ class MazeEnv(gym.Env):
             for col in range(6):
                 grid[1][col][0] = True
 
+        # Plain 10x10 board
         elif board_number == 3: 
             num_rows, num_cols = 10, 10
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
-            
+
+        # A 15x15 board with more complex walls 
         elif board_number == 4:
             num_rows, num_cols = 15, 15
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
-            
+
+        # Plain 20x20 board 
         elif board_number == 5:
             num_rows, num_cols = 20, 20
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
@@ -200,6 +227,7 @@ class MazeEnv(gym.Env):
             
         return grid, num_rows, num_cols    
 
+    # What else do I need to say about these two functions?
     def _manhattan_distance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
@@ -242,7 +270,6 @@ class MazeEnv(gym.Env):
 
     def _get_neighbors(self, row, col):
         neighbors = []          
-
         # Directions:
         # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
 

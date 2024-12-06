@@ -94,6 +94,7 @@ class QLearningAgent:
             new_q = current_q + self.alpha * (target_q - current_q)
             self.q_table[(state, action)] = new_q
 
+    # This function will save the agent state and is very useful
     def save(self, filename):
         """Save agent state"""
         state = {
@@ -105,6 +106,7 @@ class QLearningAgent:
         with open(filename, 'wb') as f:
             pickle.dump(state, f)
 
+    # Load can then be used to test a learned agent in a different state space
     def load(self, filename):
         """Load agent state"""
         with open(filename, 'rb') as f:
@@ -114,6 +116,7 @@ class QLearningAgent:
         self.alpha = state['alpha']
         self.training_steps = state['training_steps']
 
+    # Used for data aggregation within main 
     def get_stats(self):
         """Return current learning statistics"""
         return {
