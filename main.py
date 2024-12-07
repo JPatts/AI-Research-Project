@@ -143,6 +143,7 @@ def main():
             done = False
             total_reward = 0
             steps = 0
+            game_over_displayed = False
 
             while not done:
                 # This will make the program render less frequently
@@ -165,7 +166,8 @@ def main():
             # below if statement makes GAME OVER screen
             if done:
                 pass
-                #env._game_over_screen()
+                env._game_over_screen()
+                game_over_displayed = True
 
             # Appending the number of steps and rewards amount to the local lists
             episode_rewards.append(total_reward)

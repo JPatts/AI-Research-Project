@@ -17,7 +17,6 @@ class MazeEnv(gym.Env):
     def __init__(self, board_number=1):
         super(MazeEnv, self).__init__()
 
-
         # Helpful constants
         self.GRID_SIZE = 60
         self.LINE_WIDTH = 3
@@ -28,6 +27,16 @@ class MazeEnv(gym.Env):
         # This will load the board configuration
         self.board_number = board_number
         self.grid, self.num_rows, self.num_cols = self._load_board(board_number)
+
+        # load all background images 
+        self.background_images = {}
+        for row in range(self.num_rows):
+            for col in range(self.num_cols):
+                bg_path = self.grid[row][col]['background']
+                if bg_path not in self.background_images:
+                    self.background_images[bg_path] = pygame.transform.scale(
+                        pygame.image.load(bg_path), (self.GRID_SIZE, self.GRID_SIZE)
+                    )
 
         # Define the action and observation space
         self.action_space = spaces.Discrete(4) # up, down, left, right
@@ -43,15 +52,23 @@ class MazeEnv(gym.Env):
         # and the human
         pygame.init()
         self.screen = None
-        self.human_image = pygame.transform.scale(
-            pygame.image.load(os.path.join('assets', 'old_man.png')), 
-            (self.GRID_SIZE, self.GRID_SIZE)
-        )
-        self.zombie_image = pygame.transform.scale(
-            pygame.image.load(os.path.join('assets', 'zombie.png')), 
-            (self.GRID_SIZE, self.GRID_SIZE)
-        )
 
+        self.human_images = []
+        for i in range(1,7):
+            img = pygame.image.load(os.path.join('assets/human_images',f'human_{i}.png'))
+            img = pygame.transform.scale(img, (self.GRID_SIZE, self.GRID_SIZE))
+            self.human_images.append(img)
+        
+        self.zombie_images = []
+        for i in range(1,7):
+            img = pygame.image.load(os.path.join('assets/zombie_images',f'zombie_{i}.png'))
+            img = pygame.transform.scale(img, (self.GRID_SIZE, self.GRID_SIZE))
+            self.zombie_images.append(img)
+
+        self.human_dead_image = pygame.transform.scale(
+            pygame.image.load(os.path.join('assets/human_images', 'human_dead.png')), (self.GRID_SIZE, self.GRID_SIZE))
+
+        self.frame_count = 0
         # Reset initailizes the environment and puts the zombie and human at opposite corners
         self.reset()
 
@@ -116,15 +133,37 @@ class MazeEnv(gym.Env):
 
     # Get observation is used to get the observation of the environment for use by the zombie
     def _get_obs(self): 
+        # this function is updated since wall data and background images are now a dictionary which cannot be converterd numerically
+        # this function now extracts only the wall data out of this dictionary so it can be used like before 
+        # old function:
+        """
         grid_flat = np.array(self.grid).flatten()
         return np.concatenate([
             np.array(self.human_pos),
             np.array(self.zombie_pos),
             grid_flat
-        ]).astype(np.float32)
-    
+        ]).astype(np.float32) """
+
+        # Extract wall information into a numeric array
+        wall_data = []
+        for row in range(self.num_rows):
+            for col in range(self.num_cols):
+                walls = self.grid[row][col]['walls']
+                # Convert booleans to 0/1
+                wall_data.extend([1 if w else 0 for w in walls])
+
+        # Convert positions and wall data to float32
+        human_pos_array = np.array(self.human_pos, dtype=np.float32)
+        zombie_pos_array = np.array(self.zombie_pos, dtype=np.float32)
+        walls_array = np.array(wall_data, dtype=np.float32)
+
+        # Concatenate them
+        return np.concatenate([human_pos_array, zombie_pos_array, walls_array])
+ 
     # Rendering the environment itself
     def render(self, mode='human'):
+        self.frame_count += 1
+
         if self.screen is None:
             self.screen = pygame.display.set_mode((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE))
 
@@ -139,49 +178,62 @@ class MazeEnv(gym.Env):
         # This function will highlight the A* path and goal if they exist
         self._highlight_human_path()
 
+        # determine frame count for human and zombie
+        human_frame = self.frame_count % len(self.human_images)
+        zombie_frame = self.frame_count % len(self.zombie_images)
+
         # Draw characters
         human_row, human_col = self.human_pos
         zombie_row, zombie_col = self.zombie_pos
-        self._draw_character(human_row, human_col, self.human_image)  
-        self._draw_character(zombie_row, zombie_col, self.zombie_image)
+
+        self._draw_character(human_row, human_col, self.human_images[human_frame])  
+        self._draw_character(zombie_row, zombie_col, self.zombie_images[zombie_frame])
 
         pygame.display.flip()
 
     def _game_over_screen(self):
-        # copy current screen
-        screen_copy = self.screen.copy()
+        # Draw the final state with the human lying down
+        human_row, human_col = self.human_pos
+        zombie_row, zombie_col = self.zombie_pos
 
-        small_scale = 0.1 
-        small_width = int(self.num_cols * self.GRID_SIZE * small_scale)
-        small_height = int(self.num_cols * self.GRID_SIZE * small_scale)
+        self.screen.fill(self.WHITE)
+        self._draw_maze()
 
-        small_surface = pygame.transform.smoothscale(screen_copy, (small_width,small_height))
+        # Draw the human lying down at their last position
+        self._draw_character(human_row, human_col, self.human_dead_image)
 
-        #scale back up for pixelation
-        pixelated_surface = pygame.transform.smoothscale(
-            small_surface, 
-            (self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE)
-        )
+        # Move the zombie away from the human position
+        escape_path = self._find_zombie_escape_path(human_row, human_col)
 
-        self.screen.blit(pixelated_surface, (0,0))
+        for (z_row, z_col) in escape_path:
+            # Draw updated maze and positions
+            self.screen.fill(self.WHITE)
+            self._draw_maze()
 
-        font = pygame.font.Font(None,100)
-        text_surface = font.render("GAME OVER", True, (255, 0, 0))
-        text_rect = text_surface.get_rect(center=(self.num_cols * self.GRID_SIZE // 2, self.num_rows * self.GRID_SIZE // 2))
+            # Draw the human lying down
+            self._draw_character(human_row, human_col, self.human_dead_image)
+
+            # Draw the zombie in its new position
+            self._draw_character(z_row, z_col, self.zombie_images[self.frame_count % len(self.zombie_images)])
+
+            pygame.display.flip()
+            pygame.time.delay(200)  # Delay to simulate animation
+
+        # Optionally fade out or display "Game Over" text
+        font = pygame.font.Font(None, 72)
+        text_surface = font.render("Game Over", True, (255, 0, 0))
+        text_rect = text_surface.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
         self.screen.blit(text_surface, text_rect)
-
         pygame.display.flip()
-        pygame.time.wait(2000)
-        #pygame.quit()
-        #sys.exit()
+        pygame.time.delay(3000)  # Pause before ending
 
     def _highlight_human_path(self):
         if hasattr(self, 'human_path') and self.human_path and hasattr(self, 'human_goal') and self.human_goal:
             # create transparent overlay 
             overlay = pygame.Surface((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE), pygame.SRCALPHA)
 
-            # RGBA format (R, G, B, A) where A is is alpha transparency (0-255)
-            path_color = (50, 150, 50, 20)
+            # RGBA format (R, G, B, A) where A is alpha transparency (0-255)
+            path_color = (255, 0, 0, 100)
 
             # draw path cells
             for(r, c) in self.human_path:
@@ -194,9 +246,9 @@ class MazeEnv(gym.Env):
                 blink_on = (current_time // 200) % 2 == 0 # every half second
                 
                 if blink_on:
-                    goal_color = (255, 255, 0, 100) # yellow
+                    goal_color = (255, 237, 0, 100)
                 else:
-                    goal_color = (255, 255, 0, 50)  # dimmer yellow
+                    goal_color = (255, 128, 13, 100)
 
                 goal_r, goal_c = self.human_goal
                 gx = goal_c * self.GRID_SIZE
@@ -232,28 +284,35 @@ class MazeEnv(gym.Env):
             for col in range(self.num_cols):
                 x = col * self.GRID_SIZE
                 y = row * self.GRID_SIZE
+                
+                # draw background background images before walls
+                bg_path = self.grid[row][col]['background']
+                bg_image = self.background_images[bg_path]
+                self.screen.blit(bg_image, (x,y))
 
                 # Draw walls
-                if self.grid[row][col][0]:  # Top wall
+                walls = self.grid[row][col]['walls']
+                if walls[0]:  # Top wall
                     pygame.draw.line(self.screen, self.BLACK, (x, y), (x + self.GRID_SIZE, y), self.LINE_WIDTH)
-                if self.grid[row][col][1]:  # Right wall
+                if walls[1]:  # Right wall
                     pygame.draw.line(self.screen, self.BLACK, (x + self.GRID_SIZE, y), (x + self.GRID_SIZE, y + self.GRID_SIZE), self.LINE_WIDTH)
-                if self.grid[row][col][2]:  # Bottom wall
+                if walls[2]:  # Bottom wall
                     pygame.draw.line(self.screen, self.BLACK, (x, y + self.GRID_SIZE), (x + self.GRID_SIZE, y + self.GRID_SIZE), self.LINE_WIDTH)
-                if self.grid[row][col][3]:  # Left wall
+                if walls[3]:  # Left wall
                     pygame.draw.line(self.screen, self.BLACK, (x, y), (x, y + self.GRID_SIZE), self.LINE_WIDTH)
 
                 # draw coordinates on sqaures for testing purposes
+                """
                 text_surface = font.render(f"({row},{col})", True, self.GRAY)
                 text_rect = text_surface.get_rect(center=(x + self.GRID_SIZE // 2, y + self.GRID_SIZE // 2))
-                self.screen.blit(text_surface, text_rect)
+                self.screen.blit(text_surface, text_rect) """
 
     # Loads the board configuration. There are 5 different choices here
     def _load_board(self, board_number):
         # Plain 5x5 board
         if board_number == 1:
             num_rows, num_cols = 5, 5
-            grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
+            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
             
         # A 8x8 board with a wall
         elif board_number == 2:
@@ -261,32 +320,6 @@ class MazeEnv(gym.Env):
             grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
             # Add walls for board 2
             # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
-
-            # adds bottom wall to grid point (0,0) to (0,6)
-            for col in range(6):
-                grid[1][col][2] = True 
-            
-            # adds top wall to grid point (0,0) to (0,6)
-            for col in range(6):
-                grid[2][col][0] = True
-
-            for col in range(6):
-                grid[5][col+2][2] = True
-            
-            for col in range(6):
-                grid[6][col+2][0] = True
-
-            grid[6][4][2] = True
-            grid[7][4][0] = True
-
-            grid[5][1][3] = True
-            grid[5][0][1] = True
-
-            grid[6][1][3] = True
-            grid[6][0][1] = True
-            
-            grid[7][1][3] = True
-            grid[7][0][1] = True
 
         # Plain 10x10 board
         elif board_number == 3: 
@@ -354,20 +387,21 @@ class MazeEnv(gym.Env):
         # Directions:
         # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
 
+        walls = self.grid[row][col]['walls']
         # Move up if no top wall
-        if row > 0 and not self.grid[row][col][0]:
+        if row > 0 and not walls[0]:
             neighbors.append((row - 1, col))
 
         # Move right if no right wall
-        if col < self.num_cols - 1 and not self.grid[row][col][1]:
+        if col < self.num_cols - 1 and not walls[1]:
             neighbors.append((row, col + 1))
 
         # Move down if no bottom wall
-        if row < self.num_rows - 1 and not self.grid[row][col][2]:
+        if row < self.num_rows - 1 and not walls[2]:
             neighbors.append((row + 1, col))
     
         # Move left if no left wall
-        if col > 0 and not self.grid[row][col][3]:
+        if col > 0 and not walls[3]:
             neighbors.append((row, col - 1))
 
         return neighbors
@@ -386,13 +420,15 @@ class MazeEnv(gym.Env):
         
         # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
 
-        if action == 0 and row > 0 and not self.grid[row][col][0]:
+        walls = self.grid[row][col]['walls']
+
+        if action == 0 and row > 0 and not walls[0]:
                 row -= 1
-        elif action == 1 and col < self.num_cols - 1 and not self.grid[row][col][1]:
+        elif action == 1 and col < self.num_cols - 1 and not walls[1]:
                 col += 1
-        elif action == 2 and row < self.num_rows - 1 and not self.grid[row][col][2]:
+        elif action == 2 and row < self.num_rows - 1 and not walls[2]:
                 row += 1
-        elif action == 3 and col > 0 and not self.grid[row][col][3]:
+        elif action == 3 and col > 0 and not walls[3]:
                 col -= 1
         return (row, col)
 
@@ -469,3 +505,12 @@ class MazeEnv(gym.Env):
                     queue.append((nr,nc))
         
         return distances
+    
+    def _find_zombie_escape_path(self, human_row, human_col):
+        # move zombie away from human
+        corners = [(0,0),(0, self.num_cols -1),(self.num_rows - 1, 0),(self.num_rows - 1, self.num_cols -1)]
+        escape_corner = max(corners, key=lambda corner: self._manhattan_distance(corner, (human_row,human_col)))
+
+        # use A* to get path
+        path = self._a_star(self.zombie_pos, escape_corner)
+        return path if path else [self.zombie_pos]
