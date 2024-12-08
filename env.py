@@ -357,17 +357,63 @@ class MazeEnv(gym.Env):
             for i in range(5, 8):
                 grid[i][7]['walls'][3] = True  # Left wall
                 grid[i][6]['walls'][1] = True  # Right wall
+            
+            grid[1][3]['walls'][3] = True
+            grid[1][2]['walls'][1] = True
 
         # A 15x15 board with more complex walls 
         elif board_number == 4:
-            num_rows, num_cols = 15, 15
-            grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
+            num_rows, num_cols = 5, 5
+            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+            
+            # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
 
+            for col in range(1,5):
+                grid[0][col]['walls'][2] = True
+                grid[1][col]['walls'][0] = True
+
+            # (1,0) bottom wall
+            grid[1][0]['walls'][2] = True
+            grid[2][0]['walls'][0] = True
+            # (2,0) bottom wall
+            grid[1][1]['walls'][2] = True
+            grid[2][1]['walls'][0] = True
+            # (1,3) right wall
+            grid[1][2]['walls'][1] = True
+            grid[1][3]['walls'][3] = True
+            # (2,3) right wall
+            grid[2][2]['walls'][1] = True
+            grid[2][3]['walls'][3] = True
+            # (2,3) right wall 
+            grid[2][3]['walls'][1] = True
+            grid[2][4]['walls'][3] = True
+            # (3,3) right wall  
+            grid[3][3]['walls'][1] = True
+            grid[3][4]['walls'][3] = True
+            # (3,3) bottom wall  
+            grid[3][3]['walls'][2] = True
+            grid[4][3]['walls'][0] = True
+            # (3,2) bottom wall  
+            grid[3][2]['walls'][2] = True
+            grid[4][2]['walls'][0] = True
+            # (3,2) left wall  
+            grid[3][2]['walls'][3] = True
+            grid[3][1]['walls'][1] = True
+            # (4,1) right wall  
+            grid[4][1]['walls'][1] = True
+            grid[4][2]['walls'][3] = True
+            # (3,1) right wall  
+            grid[3][1]['walls'][0] = True
+            grid[2][1]['walls'][2] = True
+            # (4,1) right wall  
+            grid[3][1]['walls'][3] = True
+            grid[3][0]['walls'][1] = True
+            
         # Plain 20x20 board 
         elif board_number == 5:
             num_rows, num_cols = 20, 20
-            grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
-            
+            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+
         else:
             raise ValueError("Board number must be between 1 and 5")
             
