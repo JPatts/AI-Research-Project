@@ -136,13 +136,6 @@ class MazeEnv(gym.Env):
         # this function is updated since wall data and background images are now a dictionary which cannot be converterd numerically
         # this function now extracts only the wall data out of this dictionary so it can be used like before 
         # old function:
-        """
-        grid_flat = np.array(self.grid).flatten()
-        return np.concatenate([
-            np.array(self.human_pos),
-            np.array(self.zombie_pos),
-            grid_flat
-        ]).astype(np.float32) """
 
         # Extract wall information into a numeric array
         wall_data = []
@@ -237,28 +230,33 @@ class MazeEnv(gym.Env):
             # RGBA format (R, G, B, A) where A is alpha transparency (0-255)
             path_color = (255, 0, 0, 100)
 
+            # make highlighted sqaures smaller
+            square_scale = 0.2
+            sqaure_size = int(self.GRID_SIZE * square_scale)
+            square_offset = (self.GRID_SIZE - sqaure_size) // 2
+
             # draw path cells
-            for(r, c) in self.human_path:
-                x = c * self.GRID_SIZE
-                y = r * self.GRID_SIZE
-                pygame.draw.rect(overlay, path_color, (x, y, self.GRID_SIZE, self.GRID_SIZE))
+            for(r,c) in self.human_path:
+                x = c * self.GRID_SIZE + square_offset
+                y = r * self.GRID_SIZE + square_offset
+                pygame.draw.rect(overlay, path_color, (x,y,sqaure_size,sqaure_size))
 
-                # Make goal cell blink 
-                current_time = pygame.time.get_ticks()
-                blink_on = (current_time // 200) % 2 == 0 # every half second
-                
-                if blink_on:
-                    goal_color = (255, 237, 0, 100)
-                else:
-                    goal_color = (255, 128, 13, 100)
+            # Make goal cell blink 
+            current_time = pygame.time.get_ticks()
+            blink_on = (current_time // 50) % 2 == 0  # Blink every 50 ms
+            
+            if blink_on:
+                goal_color = (255, 248, 20, 100)
+            else:
+                goal_color = (255, 255, 255, 100)
 
-                goal_r, goal_c = self.human_goal
-                gx = goal_c * self.GRID_SIZE
-                gy = goal_r * self.GRID_SIZE
-                pygame.draw.rect(overlay, goal_color, (gx, gy, self.GRID_SIZE, self.GRID_SIZE))
+            goal_r, goal_c = self.human_goal
+            gx = goal_c * self.GRID_SIZE + square_offset
+            gy = goal_r * self.GRID_SIZE + square_offset
+            pygame.draw.rect(overlay, goal_color, (gx, gy, sqaure_size, sqaure_size))
 
-                # blit overlay onto screen
-                self.screen.blit(overlay, (0,0))
+            # blit overlay onto screen
+            self.screen.blit(overlay, (0,0))
 
     # Used if the user clicks the x on the pygame window
     def close(self):
@@ -303,11 +301,12 @@ class MazeEnv(gym.Env):
                 if walls[3]:  # Left wall
                     pygame.draw.line(self.screen, self.BLACK, (x, y), (x, y + self.GRID_SIZE), self.LINE_WIDTH)
 
-                # draw coordinates on sqaures for testing purposes
-                """
+                # DO NOT DELETE COMEMENTED CODE BELOW
+                # draws coordinates on sqaures for testing purposes -- gets commented out for end visuals 
+                
                 text_surface = font.render(f"({row},{col})", True, self.GRAY)
                 text_rect = text_surface.get_rect(center=(x + self.GRID_SIZE // 2, y + self.GRID_SIZE // 2))
-                self.screen.blit(text_surface, text_rect) """
+                self.screen.blit(text_surface, text_rect)
 
     # Loads the board configuration. There are 5 different choices here
     def _load_board(self, board_number):
@@ -319,14 +318,45 @@ class MazeEnv(gym.Env):
         # A 8x8 board with a wall
         elif board_number == 2:
             num_rows, num_cols = 8, 8
-            grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
+            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
             # Add walls for board 2
             # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+
+            for col in range(0,6):
+                grid[1][col]['walls'][2] = True # add bottom wall to grid point (0,0)
+                grid[2][col]['walls'][0] = True # add top wall to grid point (0,1)
+            
+            for col in range(2,8):
+                grid[5][col]['walls'][2] = True # add bottom wall to grid point (0,0)
+                grid[6][col]['walls'][0] = True # add top wall to grid point (0,1)
 
         # Plain 10x10 board
         elif board_number == 3: 
             num_rows, num_cols = 10, 10
-            grid = [[[False, False, False, False] for _ in range(num_cols)] for _ in range(num_rows)]
+            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+
+            # Horizontal wall block from (2,2) to (2,6) and its opposite at (3,2) to (3,6)
+            for col in range(2, 7):
+                grid[2][col]['walls'][2] = True  # Bottom wall
+                grid[3][col]['walls'][0] = True  # Top wall
+
+            # Vertical wall block from (4,4) to (7,4) and its opposite at (4,5) to (7,5)
+            for row in range(4, 8):
+                grid[row][4]['walls'][1] = True  # Right wall
+                grid[row][5]['walls'][3] = True  # Left wall
+
+            # Adding top and bottom walls on rows 1 and 8 with symmetry
+            for col in range(1, 9):
+                grid[1][col]['walls'][2] = True  # Bottom wall
+                grid[2][col]['walls'][0] = True  # Top wall
+                grid[8][col]['walls'][2] = True  # Bottom wall
+                grid[9][col]['walls'][0] = True  # Top wall
+
+            # Add more creative patterns for maze-like behavior
+            # Diagonal block from (5,7) to (7,7) and its symmetry
+            for i in range(5, 8):
+                grid[i][7]['walls'][3] = True  # Left wall
+                grid[i][6]['walls'][1] = True  # Right wall
 
         # A 15x15 board with more complex walls 
         elif board_number == 4:
