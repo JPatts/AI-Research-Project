@@ -111,7 +111,7 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
 
 
 #this loads in a model to make sure the plotting works without me having to wait forever
-def test_plot(board_num, episodes=100, pretrained_model=900):
+def test_plot(board_num:int, episodes=100, pretrained_model=900):
     model_dir = os.path.join(os.path.dirname(__file__), 'models')
     pretrained_path = os.path.join(model_dir, f'zombie_agent_ep{pretrained_model}.pkl')
 
@@ -120,7 +120,7 @@ def test_plot(board_num, episodes=100, pretrained_model=900):
         return
     
     env = MazeEnv(board_number=board_num)
-    agent = QLearningAgent(env.observation_space[0], env.action_space.n)
+    agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
 
     agent.load(pretrained_path)
 
@@ -159,7 +159,7 @@ def test_plot(board_num, episodes=100, pretrained_model=900):
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
 
-    test_plot(5, 100, 900)
+    test_plot(1, 100, 900)
 
     #call to the test_plot function to test the plotting
     quick_test = True
