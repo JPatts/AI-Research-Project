@@ -135,7 +135,7 @@ def test_plot(board_num, episodes=100, pretrained_model=900):
 
             while not done:
                 action = agent.get_action(state)
-                next_state, reward, done, info = env.step(action)
+                next_state, reward, done = env.step(action)
                 state = next_state
 
                 total_reward += reward
