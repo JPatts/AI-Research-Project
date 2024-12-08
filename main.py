@@ -165,6 +165,8 @@ def main():
                 if done and episode % render_frequency == 0:
                     env._game_over_screen()
                     break
+                if done and episode % render_frequency != 0:
+                    break
             
             # Appending the number of steps and rewards amount to the local lists
             episode_rewards.append(total_reward)

@@ -217,7 +217,8 @@ class MazeEnv(gym.Env):
             self._draw_character(z_row, z_col, self.zombie_images[self.frame_count % len(self.zombie_images)])
 
             pygame.display.flip()
-            pygame.time.delay(200)  # Delay to simulate animation
+            #pygame.time.delay(200)  # Delay to simulate animation
+            pygame.time.Clock().tick(5)
 
         # Optionally fade out or display "Game Over" text
         font = pygame.font.Font(None, 72)
@@ -225,7 +226,8 @@ class MazeEnv(gym.Env):
         text_rect = text_surface.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
         self.screen.blit(text_surface, text_rect)
         pygame.display.flip()
-        pygame.time.delay(3000)  # Pause before ending
+        #pygame.quit()
+        #pygame.time.delay(3000)  # Pause before ending
 
     def _highlight_human_path(self):
         if hasattr(self, 'human_path') and self.human_path and hasattr(self, 'human_goal') and self.human_goal:
