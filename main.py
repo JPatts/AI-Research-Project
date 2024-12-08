@@ -159,8 +159,6 @@ def test_plot(board_num:int, episodes=100, pretrained_model=900):
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
 
-    test_plot(1, 100, 900)
-
     #call to the test_plot function to test the plotting
     quick_test = True
 
