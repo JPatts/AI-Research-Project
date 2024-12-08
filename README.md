@@ -4,6 +4,7 @@ This repo exists for the CS-441 AI Research Project and has been contributed to 
 ### Rayne Allen
 ### Christopher Sloggett
 
+## Dependencies
 This code requires you to pip install pygame, heapq, gymnasium, numpy
 
 Currently the game is run with 'python run_env.py'
