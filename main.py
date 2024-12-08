@@ -111,12 +111,12 @@ def main():
     save_frequency = 100
     render_frequency = 50
 
-    """
-    Train agents on different boards
+    
+    #Train agents on different boards
 
-    metrics_5x5 = train_agent(1, episodes, render_frequency, agent)
-    metrics_10x10 = train_agent(3, episodes, render_frequency, agent)
-    metrics_20x20 = train_agent(5, episodes, render_frequency, agent)
+    metrics_5x5 = test_agent(1, episodes, render_frequency, agent)
+    metrics_10x10 = test_agent(3, episodes, render_frequency, agent)
+    metrics_20x20 = test_agent(5, episodes, render_frequency, agent)
 
     # Plotting the metrics
     plot_training(metrics_5x5['rewards'], metrics_5x5['steps'], metrics_5x5['epsilon'], episodes)
@@ -126,11 +126,11 @@ def main():
     #testing 5x5 on 20x20
     pretrained_model_path = os.path.join(os.path.dirname(__file__), 'models', 'zombie_agent_ep1000.pkl')
 
-    metrics_PT_20x20 = test_agent(5, episodes=100, render_frequency, agent, pretrained_model_path)
+    metrics_PT_20x20 = test_agent(5, 100, render_frequency, agent, pretrained_model_path)
 
     #plot results
     plot_training(metrics_PT_20x20['rewards'], metrics_PT_20x20['steps'], metrics_PT_20x20['epsilon'], 100)
-    """
+
     
     # Used to track metrics
     episode_rewards = []
