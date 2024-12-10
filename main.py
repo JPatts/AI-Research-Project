@@ -378,47 +378,8 @@ def main():
     if quick_test:
         test_plot(1)
         return
-    
-    # Helpful definitions
-    episodes = 1000
-    render_frequency = 50
 
-    #this is where agents and envs are initialized
-    env_5x5 = MazeEnv(board_number=1)
-    agent_5x5 = QLearningAgent(env_5x5.observation_space.shape[0], env_5x5.action_space.n)
-
-    env_8x8 = MazeEnv(board_number=2)
-    agent_8x8 = QLearningAgent(env_8x8.observation_space.shape[0], env_8x8.action_space.n)
-
-    env_15x15 = MazeEnv(board_number=4)
-    agent_15x15 = QLearningAgent(env_15x15.observation_space.shape[0], env_15x15.action_space.n)
-
-    env_10x10 = MazeEnv(board_number=3)
-    agent_10x10 = QLearningAgent(env_10x10.observation_space.shape[0], env_10x10.action_space.n)
-
-    env_20x20 = MazeEnv(board_number=5)
-    agent_20x20 = QLearningAgent(env_20x20.observation_space.shape[0], env_20x20.action_space.n)
-
-    
-    #Train agents on different boards
-
-    metrics_5x5 = test_agent(1, episodes, render_frequency, agent_5x5)
-    metrics_8x8 = test_agent(2, episodes, render_frequency, agent_8x8)
-    metrics_10x10 = test_agent(3, episodes, render_frequency, agent_10x10)
-    metrics_15x15 = test_agent(4, episodes, render_frequency, agent_15x15)
-    metrics_20x20 = test_agent(5, episodes, render_frequency, agent_20x20)
-
-    #plots metrics for each board
-    plot_training(metrics_5x5['rewards'], metrics_5x5['steps'], metrics_5x5['epsilon'], episodes)
-    plot_training(metrics_10x10['rewards'], metrics_10x10['steps'], metrics_10x10['epsilon'], episodes)
-    plot_training(metrics_20x20['rewards'], metrics_20x20['steps'], metrics_20x20['epsilon'], episodes)
-
-    #this is to test the 20x20 agent on a 5x5 board
-    pretrained_path = os.path.join(os.path.dirname(__file__), 'models', 'zombie_agent_ep1000.pkl')
-    metrics_PT_20x20 = test_agent(5, 100, render_frequency, agent_20x20, pretrained_path)
-    plot_training(metrics_PT_20x20['rewards'], metrics_PT_20x20['steps'], metrics_PT_20x20['epsilon'], 100)
-
-    """print("Select a board to test the agent on (enter the corresponding number):")
+    print("Select a board to test the agent on (enter the corresponding number):")
     print("1. 5x5 board")
     print("2. 8x8 board")
     print("3. 10x10 board")
@@ -435,8 +396,9 @@ def main():
     if board_num not in [1, 2, 3, 4, 5]:
         print("Invalid input. Please enter a number between 1 and 5.")
         return
-    
+        
     episodes = 1000
+
     render_frequency = 50
 
     env = MazeEnv(board_number=board_num)
@@ -445,7 +407,7 @@ def main():
     print("Training agent...")
     metrics = test_agent(board_num, episodes, render_frequency, agent)
 
-    plot_training(metrics['rewards'], metrics['steps'], metrics['epsilon'], episodes)"""
+    plot_training(metrics['rewards'], metrics['steps'], metrics['epsilon'], episodes)
 
     
 
