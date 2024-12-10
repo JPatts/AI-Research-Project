@@ -291,6 +291,12 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
                 total_reward += reward #accumulate rewards
                 total_steps += 1 #accumulate steps
 
+                if done and episode % render_frequency == 0:
+                    env._game_over_screen()
+                    break
+                if done and episode % render_frequency != 0:
+                    break
+
             #record the rewards, steps, and epsilon
             rewards.append(total_reward)
             steps.append(total_steps)
