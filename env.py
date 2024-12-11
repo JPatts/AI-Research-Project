@@ -228,7 +228,7 @@ class MazeEnv(gym.Env):
             overlay = pygame.Surface((self.num_cols * self.GRID_SIZE, self.num_rows * self.GRID_SIZE), pygame.SRCALPHA)
 
             # RGBA format (R, G, B, A) where A is alpha transparency (0-255)
-            path_color = (255, 0, 0, 100)
+            path_color = (255, 0, 0, 255)
 
             # make highlighted sqaures smaller
             square_scale = 0.2
@@ -246,9 +246,9 @@ class MazeEnv(gym.Env):
             blink_on = (current_time // 50) % 2 == 0  # Blink every 50 ms
             
             if blink_on:
-                goal_color = (255, 248, 20, 100)
+                goal_color = (255, 248, 20, 255)
             else:
-                goal_color = (255, 255, 255, 100)
+                goal_color = (255, 255, 255, 255)
 
             goal_r, goal_c = self.human_goal
             gx = goal_c * self.GRID_SIZE + square_offset
@@ -303,10 +303,10 @@ class MazeEnv(gym.Env):
 
                 # DO NOT DELETE COMEMENTED CODE BELOW
                 # draws coordinates on sqaures for testing purposes -- gets commented out for end visuals 
-                
+                """
                 text_surface = font.render(f"({row},{col})", True, self.GRAY)
                 text_rect = text_surface.get_rect(center=(x + self.GRID_SIZE // 2, y + self.GRID_SIZE // 2))
-                self.screen.blit(text_surface, text_rect)
+                self.screen.blit(text_surface, text_rect) """
 
     # Loads the board configuration. There are 5 different choices here
     def _load_board(self, board_number):
@@ -315,7 +315,7 @@ class MazeEnv(gym.Env):
             num_rows, num_cols = 5, 5
             grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
             
-        # A 8x8 board with a wall
+        # A 8x8 board with two walls
         elif board_number == 2:
             num_rows, num_cols = 8, 8
             grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
@@ -330,7 +330,7 @@ class MazeEnv(gym.Env):
                 grid[5][col]['walls'][2] = True # add bottom wall to grid point (0,0)
                 grid[6][col]['walls'][0] = True # add top wall to grid point (0,1)
 
-        # Plain 10x10 board
+        # sporadic 10x10 board
         elif board_number == 3: 
             num_rows, num_cols = 10, 10
             grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
@@ -361,7 +361,7 @@ class MazeEnv(gym.Env):
             grid[1][3]['walls'][3] = True
             grid[1][2]['walls'][1] = True
 
-        # A 15x15 board with more complex walls 
+        # A 5x5 board with more complex walls 
         elif board_number == 4:
             num_rows, num_cols = 5, 5
             grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
@@ -409,11 +409,69 @@ class MazeEnv(gym.Env):
             grid[3][1]['walls'][3] = True
             grid[3][0]['walls'][1] = True
             
-        # Plain 20x20 board 
+        # intricate 10x10 board 
         elif board_number == 5:
-            num_rows, num_cols = 20, 20
-            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+            num_rows, num_cols = 10, 10
+            grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
 
+            # above creates grid on entire board
+             
+            # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+            # define directions
+            directions = [
+            (-1, 0, 0, 2),  # Up
+            (0, 1, 1, 3),   # Right
+            (1, 0, 2, 0),   # Down
+            (0, -1, 3, 1)   # Left
+            ]
+
+            random.seed(42)  # Fixed seed for recreation ability
+
+            def in_bounds(r, c):
+                return 0 <= r < num_rows and 0 <= c < num_cols
+
+            # Depth First Search based maze-carving
+            def carve_maze(start_r=0, start_c=0):
+                stack = [(start_r, start_c)]
+                visited = set()
+                visited.add((start_r, start_c))
+
+                while stack:
+                    r, c = stack[-1]
+                    # Try directions in random order
+                    random.shuffle(directions)
+                    carved = False
+                    for dr, dc, wall_curr, wall_next in directions:
+                        nr, nc = r + dr, c + dc
+                        if in_bounds(nr, nc) and (nr, nc) not in visited:
+                            # Remove walls between (r,c) and (nr,nc)
+                            grid[r][c]['walls'][wall_curr] = False
+                            grid[nr][nc]['walls'][wall_next] = False
+                            visited.add((nr, nc))
+                            stack.append((nr, nc))
+                            carved = True
+                            break
+                    if not carved:
+                        stack.pop()
+            
+            # Carve the maze
+            carve_maze(0, 0) 
+
+            # clear out row 0 and row (max -1) of left and right walls
+            # clear out col 0 and col (max - 1) of top and bottom walls
+            # Clear the left and right walls for the top row (row 0)
+            for r in range(num_rows):
+                grid[r][0]['walls'][2] = False
+                grid[r][0]['walls'][0] = False
+                grid[r][num_cols - 1]['walls'][2] = False
+                grid[r][num_cols - 1]['walls'][0] = False
+            
+            for c in range(num_cols):
+                grid[0][c]['walls'][3] = False
+                grid[0][c]['walls'][1] = False
+                grid[num_rows - 1][c]['walls'][3] = False
+                grid[num_rows - 1][c]['walls'][1] = False
+                
         else:
             raise ValueError("Board number must be between 1 and 5")
             

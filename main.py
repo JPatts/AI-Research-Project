@@ -386,11 +386,12 @@ def main():
         return
 
     print("Select a board to test the agent on (enter the corresponding number):")
-    print("1. 5x5 board")
-    print("2. 8x8 board")
-    print("3. 10x10 board")
-    print("4. 15x15 board")
-    print("5. 20x20 board")
+    print("The boards grow in complexity in higher numbers.")
+    print("1. 5x5 board  -- A small empty playing resulting in quicker trials")
+    print("2. 8x8 board  -- A board with two simple hallways near each starting point")
+    print("3. 10x10 board -- The largest board with sporadic walls and hallways")
+    print("4. 5x5 board  -- Small board with intricate maze system discourages zombie from learning fast")
+    print("5. 10x10 board  -- The most complex board that has empty passages along outer ring")
 
     try:
         board_num = int(input())
