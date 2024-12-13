@@ -309,7 +309,7 @@ class MazeEnv(gym.Env):
                 self.screen.blit(text_surface, text_rect) """
 
     # Loads the board configuration. There are 5 different choices here
-    def _load_board(self, board_number):
+    def _load_board(self, board_number): 
         # Plain 5x5 board
         if board_number == 1:
             num_rows, num_cols = 5, 5
@@ -332,134 +332,35 @@ class MazeEnv(gym.Env):
 
         # sporadic 10x10 board
         elif board_number == 3: 
-            num_rows, num_cols = 10, 10
-            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+            num_rows, num_cols = 8, 8
+            grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
 
-            # Horizontal wall block from (2,2) to (2,6) and its opposite at (3,2) to (3,6)
-            for col in range(2, 7):
-                grid[2][col]['walls'][2] = True  # Bottom wall
-                grid[3][col]['walls'][0] = True  # Top wall
+            self.grid = grid
+            self.num_rows = num_rows
+            self.num_cols = num_cols
 
-            # Vertical wall block from (4,4) to (7,4) and its opposite at (4,5) to (7,5)
-            for row in range(4, 8):
-                grid[row][4]['walls'][1] = True  # Right wall
-                grid[row][5]['walls'][3] = True  # Left wall
-
-            # Adding top and bottom walls on rows 1 and 8 with symmetry
-            for col in range(1, 9):
-                grid[1][col]['walls'][2] = True  # Bottom wall
-                grid[2][col]['walls'][0] = True  # Top wall
-                grid[8][col]['walls'][2] = True  # Bottom wall
-                grid[9][col]['walls'][0] = True  # Top wall
-
-            # Add more creative patterns for maze-like behavior
-            # Diagonal block from (5,7) to (7,7) and its symmetry
-            for i in range(5, 8):
-                grid[i][7]['walls'][3] = True  # Left wall
-                grid[i][6]['walls'][1] = True  # Right wall
-            
-            grid[1][3]['walls'][3] = True
-            grid[1][2]['walls'][1] = True
+            self._carve_maze(0,0)
+            self._carve_maze(0,num_cols - 1)
 
         # A 5x5 board with more complex walls 
         elif board_number == 4:
             num_rows, num_cols = 5, 5
-            grid = [[{'walls': [False, False, False, False], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+            grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
             
-            # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
+            self.grid = grid
+            self.num_rows = num_rows
+            self.num_cols = num_cols
 
-            for col in range(1,5):
-                grid[0][col]['walls'][2] = True
-                grid[1][col]['walls'][0] = True
-
-            # (1,0) bottom wall
-            grid[1][0]['walls'][2] = True
-            grid[2][0]['walls'][0] = True
-            # (2,0) bottom wall
-            grid[1][1]['walls'][2] = True
-            grid[2][1]['walls'][0] = True
-            # (1,3) right wall
-            grid[1][2]['walls'][1] = True
-            grid[1][3]['walls'][3] = True
-            # (2,3) right wall
-            grid[2][2]['walls'][1] = True
-            grid[2][3]['walls'][3] = True
-            # (2,3) right wall 
-            grid[2][3]['walls'][1] = True
-            grid[2][4]['walls'][3] = True
-            # (3,3) right wall  
-            grid[3][3]['walls'][1] = True
-            grid[3][4]['walls'][3] = True
-            # (3,3) bottom wall  
-            grid[3][3]['walls'][2] = True
-            grid[4][3]['walls'][0] = True
-            # (3,2) bottom wall  
-            grid[3][2]['walls'][2] = True
-            grid[4][2]['walls'][0] = True
-            # (3,2) left wall  
-            grid[3][2]['walls'][3] = True
-            grid[3][1]['walls'][1] = True
-            # (4,1) right wall  
-            grid[4][1]['walls'][1] = True
-            grid[4][2]['walls'][3] = True
-            # (3,1) right wall  
-            grid[3][1]['walls'][0] = True
-            grid[2][1]['walls'][2] = True
-            # (4,1) right wall  
-            grid[3][1]['walls'][3] = True
-            grid[3][0]['walls'][1] = True
-            
+            self._carve_maze(num_rows - 1,num_cols - 1)
+        
         # intricate 10x10 board 
         elif board_number == 5:
             num_rows, num_cols = 10, 10
             grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
 
-            # above creates grid on entire board
-             
-            # 0: top wall, 1: Right wall, 2; Bottom wall, 3: Left wall
-            # define directions
-            directions = [
-            (-1, 0, 0, 2),  # Up
-            (0, 1, 1, 3),   # Right
-            (1, 0, 2, 0),   # Down
-            (0, -1, 3, 1)   # Left
-            ]
+            self._carve_maze(0,0)
 
-            random.seed(42)  # Fixed seed for recreation ability
-
-            def in_bounds(r, c):
-                return 0 <= r < num_rows and 0 <= c < num_cols
-
-            # Depth First Search based maze-carving
-            def carve_maze(start_r=0, start_c=0):
-                stack = [(start_r, start_c)]
-                visited = set()
-                visited.add((start_r, start_c))
-
-                while stack:
-                    r, c = stack[-1]
-                    # Try directions in random order
-                    random.shuffle(directions)
-                    carved = False
-                    for dr, dc, wall_curr, wall_next in directions:
-                        nr, nc = r + dr, c + dc
-                        if in_bounds(nr, nc) and (nr, nc) not in visited:
-                            # Remove walls between (r,c) and (nr,nc)
-                            grid[r][c]['walls'][wall_curr] = False
-                            grid[nr][nc]['walls'][wall_next] = False
-                            visited.add((nr, nc))
-                            stack.append((nr, nc))
-                            carved = True
-                            break
-                    if not carved:
-                        stack.pop()
-            
-            # Carve the maze
-            carve_maze(0, 0) 
-
-            # clear out row 0 and row (max -1) of left and right walls
-            # clear out col 0 and col (max - 1) of top and bottom walls
-            # Clear the left and right walls for the top row (row 0)
+            # removes all out walls 
             for r in range(num_rows):
                 grid[r][0]['walls'][2] = False
                 grid[r][0]['walls'][0] = False
@@ -471,10 +372,10 @@ class MazeEnv(gym.Env):
                 grid[0][c]['walls'][1] = False
                 grid[num_rows - 1][c]['walls'][3] = False
                 grid[num_rows - 1][c]['walls'][1] = False
-                
+        
         else:
             raise ValueError("Board number must be between 1 and 5")
-            
+
         return grid, num_rows, num_cols    
 
     # What else do I need to say about these two functions?
@@ -650,3 +551,39 @@ class MazeEnv(gym.Env):
         # use A* to get path
         path = self._a_star(self.zombie_pos, escape_corner)
         return path if path else [self.zombie_pos]
+    
+    def _carve_maze(self, start_r, start_c):
+        directions = [
+            (-1, 0, 0, 2),  # Up
+            (0, 1, 1, 3),   # Right
+            (1, 0, 2, 0),   # Down
+            (0, -1, 3, 1)   # Left
+            ]
+
+        random.seed(42)  # Fixed seed allows for recreation
+
+        # Depth First Search based maze-carving
+        stack = [(start_r, start_c)]
+        visited = set()
+        visited.add((start_r, start_c))
+
+        while stack:
+            r, c = stack[-1]
+            # Try directions in random order
+            random.shuffle(directions)
+            carved = False
+            for dr, dc, wall_curr, wall_next in directions:
+                nr, nc = r + dr, c + dc
+                if self._in_bounds(nr, nc) and (nr, nc) not in visited:
+                    # Remove walls between (r,c) and (nr,nc)
+                    self.grid[r][c]['walls'][wall_curr] = False
+                    self.grid[nr][nc]['walls'][wall_next] = False
+                    visited.add((nr, nc))
+                    stack.append((nr, nc))
+                    carved = True
+                    break
+            if not carved:
+                stack.pop()
+
+    def _in_bounds(self, r, c):
+        return 0 <= r < self.num_rows and 0 <= c < self.num_cols
