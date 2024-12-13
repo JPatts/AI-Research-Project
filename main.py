@@ -13,15 +13,15 @@ import os
 #episodes: # of episodes total
 
 def plot_training(board, reward, steps, epsilon, episodes):
-    plt.figure(figsize=(18, 6)) #feel free to change this if it is too small or too big. i just put random numbers
+    plt.figure(figsize=(18, 6)) 
 
     if not os.path.exists('plots'):
         os.makedirs('plots')
 
-    #plotting reward
+    # plotting reward
     plt.subplot(1, 3, 1)
     plt.plot(reward, label='Total Reward')
-    window_size = 50 #this is the window size for the moving average
+    window_size = 50 # this is the window size for the moving average
 
     if len(reward) > window_size:
         moving_avg = np.convolve(reward, np.ones(window_size), mode='valid')
@@ -32,7 +32,7 @@ def plot_training(board, reward, steps, epsilon, episodes):
     plt.title('Episode Rewards Over Time')
     plt.legend()
 
-    #plotting steps per episode
+    # plotting steps per episode
     plt.subplot(1, 3, 2)
     plt.plot(steps, label='Steps per Episode', color='blue')
     plt.xlabel('Episode')
@@ -40,7 +40,7 @@ def plot_training(board, reward, steps, epsilon, episodes):
     plt.title('Steps Taken per Episode')
     plt.legend()
 
-    #plotting epsilon decay over episodes
+    # plotting epsilon decay over episodes
     plt.subplot(1, 3, 3)
     plt.plot(epsilon, label='Epsilon (Exploration Rate)', color='green')
     plt.xlabel('Episode')
@@ -48,7 +48,7 @@ def plot_training(board, reward, steps, epsilon, episodes):
     plt.title('Epsilon Decay Over Episodes')
     plt.legend()
 
-    plt.tight_layout() #this will make sure the plots don't overlap
+    plt.tight_layout() # this will make sure the plots don't overlap
 
     filename = f'Board_{board}_Training_Data.png'
     filepath = os.path.join(os.path.dirname(__file__), 'plots', filename)
@@ -57,13 +57,13 @@ def plot_training(board, reward, steps, epsilon, episodes):
 
 
 
-#running three boards and returning the metrics. returns a dictionary of rewards, steps, and epsilon per episode
+# Returns a dictionary of rewards, steps, and epsilon per episode
 def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=None):
     print(f"Running board {board_num}...")
     env = MazeEnv(board_number=board_num)
 
     if pretrained_model:
-        agent.load(pretrained_model) # this is going to load the model from episode 1000 of 5x5 and throw it at a 20x20
+        agent.load(pretrained_model) # this is going to load a saved model if one exists
 
     rewards, steps, epsilon = [], [], []
 
@@ -76,7 +76,7 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
 
             while not done:
                 if episode % render_frequency == 0: # Renders every 50 episodes
-                    env.render() #render env
+                    env.render() #rendering the environment
                     time.sleep(0.1)
 
                 action = agent.get_action(state)
@@ -124,7 +124,7 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
     return {'rewards': rewards, 'steps': steps, 'epsilon': epsilon}
 
 def display_training_stats(reward, steps, epsilon, episodes):
-    """Calculating and printing training statistics."""
+    #Calculating and printing training statistics
     final_stats = {
         'reward': {
             'mean': np.mean(reward),
@@ -159,16 +159,15 @@ def display_training_stats(reward, steps, epsilon, episodes):
 
 
 
-# All of this can be changed, just use the same constructs that are here for further testing
 def main():
 
     while True:
         print("Select a board to test the agent on (enter the corresponding number):")
         print("The boards grow in complexity in higher numbers.")
-        print("1. 5x5 board  -- A small empty playing resulting in quicker trials")
+        print("1. 5x5 board  -- A small empty environment resulting in quicker trials")
         print("2. 8x8 board  -- A board with two simple hallways near each starting point")
         print("3. 8x8 board -- A board with sporadic walls and hallways")
-        print("4. 5x5 board  -- Small board with intricate maze system discourages zombie from learning fast")
+        print("4. 5x5 board  -- Small board with intricate maze system")
         print("5. 10x10 board  -- The most complex board that has empty passages along outer ring (Will take a long time to finish)")
         print("6. Exit")
 
@@ -178,7 +177,7 @@ def main():
                 print("Exiting...")
                 return 
             
-            #map input to board number
+            # map input to board number
             if board_num not in [1, 2, 3, 4, 5, 6]:
                 print("Invalid input. Please enter a number between 1 and 6.")
                 continue 
