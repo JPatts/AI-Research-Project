@@ -12,8 +12,11 @@ import os
 #epsilon: exploration rate
 #episodes: # of episodes total
 
-def plot_training(reward, steps, epsilon, episodes):
+def plot_training(board, reward, steps, epsilon, episodes):
     plt.figure(figsize=(18, 6)) #feel free to change this if it is too small or too big. i just put random numbers
+
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
 
     #plotting reward
     plt.subplot(1, 3, 1)
@@ -46,7 +49,13 @@ def plot_training(reward, steps, epsilon, episodes):
     plt.legend()
 
     plt.tight_layout() #this will make sure the plots don't overlap
-    plt.show()
+
+    filename = f'Board_{board}_Training_Data.png'
+    filepath = os.path.join(os.path.dirname(__file__), 'plots', filename)
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.close()
+
+
 
 #running three boards and returning the metrics. returns a dictionary of rewards, steps, and epsilon per episode
 def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=None):
@@ -60,13 +69,13 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
 
     try:
         for episode in range(episodes):
-            state = env.reset() # reset env at the start of each epi
+            state = env.reset() # reset env at the start of each episode
             done = False
             total_reward = 0
             total_steps = 0
 
             while not done:
-                if episode % render_frequency == 0:
+                if episode % render_frequency == 0: # Renders every 50 episodes
                     env.render() #render env
                     time.sleep(0.1)
 
@@ -94,16 +103,16 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
                 avg_steps = np.mean(steps[-10:])
                 avg_epsilon = np.mean(epsilon[-10:])
 
-                print(f"\nBoard (board_num), Episode {episode}/{episodes}")
+                print(f"\nBoard {board_num}, Episode {episode}/{episodes}")
                 print(f"Average Reward (last 10): {avg_reward:.2f}")
                 print(f"Average Steps (last 10): {avg_steps:.2f}")
                 print(f"Average Epsilon (last 10): {avg_epsilon:.2f}")
                 print(f"Learning Rate: {agent.get_stats()['alpha']:.2f}")
                 print(f"Q-table size: {agent.get_stats()['q_table_size']}")
 
-            #save model every 100 episodes
-            if episode % 100 == 0:
-                agent.save(os.path.join(os.path.dirname(__file__), 'models', f'zombie_agent_ep{episode}.pkl'))
+            #Save the final model
+            if done:
+                agent.save(os.path.join(os.path.dirname(__file__), 'models', f'zombie_agent_ep{board_num}.pkl'))
 
     except KeyboardInterrupt:
         print("\nTraining interrupted. Saving model...")
@@ -114,88 +123,82 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
 
     return {'rewards': rewards, 'steps': steps, 'epsilon': epsilon}
 
-#this loads in a model to make sure the plotting works without me having to wait forever
-def test_plot(board_num:int, episodes=100, pretrained_model=900):
-    model_dir = os.path.join(os.path.dirname(__file__), 'models')
-    pretrained_path = os.path.join(model_dir, f'zombie_agent_ep{pretrained_model}.pkl')
+def display_training_stats(reward, steps, epsilon, episodes):
+    """Calculating and printing training statistics."""
+    final_stats = {
+        'reward': {
+            'mean': np.mean(reward),
+            'min': np.min(reward),
+            'max': np.max(reward),
+            'std': np.std(reward)
+        },
+        'steps': {
+            'mean': np.mean(steps),
+            'min': np.min(steps),
+            'max': np.max(steps),
+            'std': np.std(steps)
+        },
+        'final_epsilon': epsilon[-1]
+    }
 
-    if not os.path.exists(pretrained_path):
-        print(f"Model {pretrained_path} does not exist")
-        return
-    
-    env = MazeEnv(board_number=board_num)
-    agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
+    print("\nFinal Training Statistics:")
+    print("=" * 50)
+    print(f"Total Episodes: {episodes}")
+    print("\nReward Statistics:")
+    print(f"  Mean Reward: {final_stats['reward']['mean']:.2f}")
+    print(f"  Min Reward:  {final_stats['reward']['min']:.2f}")
+    print(f"  Max Reward:  {final_stats['reward']['max']:.2f}")
+    print(f"  Std Reward:  {final_stats['reward']['std']:.2f}")
+    print("\nSteps Statistics:")
+    print(f"  Mean Steps: {final_stats['steps']['mean']:.2f}")
+    print(f"  Min Steps:  {final_stats['steps']['min']:.2f}")
+    print(f"  Max Steps:  {final_stats['steps']['max']:.2f}")
+    print(f"  Std Steps:  {final_stats['steps']['std']:.2f}")
+    print(f"\nFinal Epsilon: {final_stats['final_epsilon']:.4f}")
+    print("=" * 50)
 
-    agent.load(pretrained_path)
 
-    rewards, steps, epsilon = [], [], []
-
-    try:
-        for episode in range(episodes):
-            state = env.reset()
-            done = False
-            total_reward = 0
-            total_steps = 0
-
-            while not done:
-                action = agent.get_action(state)
-                next_state, reward, done, info = env.step(action)
-                state = next_state
-
-                total_reward += reward
-                total_steps += 1
-
-            rewards.append(total_reward)
-            steps.append(total_steps)
-            epsilon.append(agent.get_stats()['epsilon'])
-    except KeyboardInterrupt:
-        print("\nTraining interrupted. Saving model...")
-        
-    finally:
-        env.close()
-
-    plot_training(rewards, steps, epsilon, episodes)
 
 # All of this can be changed, just use the same constructs that are here for further testing
 def main():
 
-    #call to the test_plot function to test the plotting
-    quick_test = False
+    while True:
+        print("Select a board to test the agent on (enter the corresponding number):")
+        print("The boards grow in complexity in higher numbers.")
+        print("1. 5x5 board  -- A small empty playing resulting in quicker trials")
+        print("2. 8x8 board  -- A board with two simple hallways near each starting point")
+        print("3. 8x8 board -- A board with sporadic walls and hallways")
+        print("4. 5x5 board  -- Small board with intricate maze system discourages zombie from learning fast")
+        print("5. 10x10 board  -- The most complex board that has empty passages along outer ring (Will take a long time to finish)")
+        print("6. Exit")
 
-    if quick_test:
-        test_plot(1)
-        return
+        try:
+            board_num = int(input())
+            if board_num == 6:
+                print("Exiting...")
+                return 
+            
+            #map input to board number
+            if board_num not in [1, 2, 3, 4, 5, 6]:
+                print("Invalid input. Please enter a number between 1 and 6.")
+                continue 
 
-    print("Select a board to test the agent on (enter the corresponding number):")
-    print("The boards grow in complexity in higher numbers.")
-    print("1. 5x5 board  -- A small empty playing resulting in quicker trials")
-    print("2. 8x8 board  -- A board with two simple hallways near each starting point")
-    print("3. 8x8 board -- A board with sporadic walls and hallways")
-    print("4. 5x5 board  -- Small board with intricate maze system discourages zombie from learning fast")
-    print("5. 10x10 board  -- The most complex board that has empty passages along outer ring")
+            episodes = 1000
+            render_frequency = 50
 
-    try:
-        board_num = int(input())
-    except ValueError:
-        print("Invalid input. Please enter a number between 1 and 5.")
-        return
-    
-    #map input to board number
-    if board_num not in [1, 2, 3, 4, 5]:
-        print("Invalid input. Please enter a number between 1 and 5.")
-        return
-        
-    episodes = 1000
+            env = MazeEnv(board_number=board_num)
+            agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
 
-    render_frequency = 50
+            print("Training agent...")
+            metrics = test_agent(board_num, episodes, render_frequency, agent)
+            plot_training(board_num, metrics['rewards'], metrics['steps'], metrics['epsilon'], episodes)
 
-    env = MazeEnv(board_number=board_num)
-    agent = QLearningAgent(env.observation_space.shape[0], env.action_space.n)
-
-    print("Training agent...")
-    metrics = test_agent(board_num, episodes, render_frequency, agent)
-
-    plot_training(metrics['rewards'], metrics['steps'], metrics['epsilon'], episodes)
+            print(f"Training complete on board {board_num}.\n")
+            display_training_stats(metrics['rewards'], metrics['steps'], metrics['epsilon'], episodes)
+            print("")
+        except ValueError:
+            print("Invalid input. Please enter a number between 1 and 6.")
+            return
 
 # Main, obv
 if __name__ == "__main__":

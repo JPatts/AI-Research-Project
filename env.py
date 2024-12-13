@@ -357,6 +357,9 @@ class MazeEnv(gym.Env):
         elif board_number == 5:
             num_rows, num_cols = 10, 10
             grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
+            self.grid = grid
+            self.num_rows = num_rows
+            self.num_cols = num_cols
 
             self._carve_maze(0,0)
 
