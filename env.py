@@ -219,8 +219,6 @@ class MazeEnv(gym.Env):
         text_rect = text_surface.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
         self.screen.blit(text_surface, text_rect)
         pygame.display.flip()
-        #pygame.quit()
-        #pygame.time.delay(3000)  # Pause before ending
 
     def _highlight_human_path(self):
         if hasattr(self, 'human_path') and self.human_path and hasattr(self, 'human_goal') and self.human_goal:
@@ -355,7 +353,7 @@ class MazeEnv(gym.Env):
         
         # intricate 10x10 board 
         elif board_number == 5:
-            num_rows, num_cols = 10, 10
+            num_rows, num_cols = 9, 9
             grid = [[{'walls': [True, True, True, True], 'background': 'assets/background_images/grass_patch_1.png'} for _ in range(num_cols)] for _ in range(num_rows)]
             self.grid = grid
             self.num_rows = num_rows
@@ -363,6 +361,7 @@ class MazeEnv(gym.Env):
 
             self._carve_maze(0,0)
 
+           
             # removes all out walls 
             for r in range(num_rows):
                 grid[r][0]['walls'][2] = False
@@ -375,13 +374,21 @@ class MazeEnv(gym.Env):
                 grid[0][c]['walls'][1] = False
                 grid[num_rows - 1][c]['walls'][3] = False
                 grid[num_rows - 1][c]['walls'][1] = False
-        
+
+            # remove middle row and middle col walls to make + path
+            for r in range(num_rows):
+                grid[r][4]['walls'][2] = False
+                grid[r][4]['walls'][0] = False
+            
+            for c in range(num_cols):
+                grid[4][c]['walls'][3] = False
+                grid[4][c]['walls'][1] = False
+
         else:
             raise ValueError("Board number must be between 1 and 5")
 
         return grid, num_rows, num_cols    
 
-    # What else do I need to say about these two functions?
     def _manhattan_distance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 

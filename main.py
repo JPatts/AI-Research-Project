@@ -77,7 +77,7 @@ def test_agent(board_num, episodes, render_frequency, agent, pretrained_model=No
             while not done:
                 if episode % render_frequency == 0: # Renders every 50 episodes
                     env.render() #rendering the environment
-                    time.sleep(0.1)
+                    time.sleep(0.1) # this can be commented out for the agents to run at lightning speeds
 
                 action = agent.get_action(state)
                 next_state, reward, done, info = env.step(action)
